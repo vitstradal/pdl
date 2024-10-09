@@ -646,14 +646,10 @@ sub mapflex {
 		} elsif ($type eq 'f77') {
 			$f77mode = 1;
 		} else {
-			my($si) = 1;
-			foreach (ref $hdr->{Dims} ? @{$hdr->{Dims}} : $hdr->{Dims}) {
-			$si *= $_;
-			}
 			barf("Bad typename '$type' in mapflex")
 				unless defined $flextypes{$type};
 			$type = $flextypes{$type};
-			$size += $si * PDL::Core::howbig ($type);
+			$size += _data_size_in_bytes($type, $hdr->{Dims});
 		}
     }
 # $s now contains estimated size of data in header --
@@ -701,9 +697,8 @@ READ:
 				unless defined $flextypes{$type};
 			$type = $flextypes{$type};
 		}
-		my $pdl = PDL->zeroes(PDL::Type->new($type),
-				      ref $hdr->{Dims} ? @{$hdr->{Dims}} : $hdr->{Dims});
-		$len = length $ {$pdl->get_dataref};
+		my $pdl = PDL->zeroes(PDL::Type->new($type), 42);
+		$len = _data_size_in_bytes($type, $hdr->{Dims});
 
 		&mapchunk($d,$pdl,$len,$name,$offset) or last READ;
 		$chunkread += $len;
@@ -740,6 +735,15 @@ READ:
 		}
     }
     wantarray ? @out : $out[0];
+}
+
+sub _data_size_in_bytes {
+	my ($type, $dims) = @_;
+	my $si = 1;
+	foreach ( ref $dims ? @$dims : $dims ) {
+		$si *= $_;
+	}
+	return $si * PDL::Core::howbig ($type);
 }
 
 =head2 writeflex
